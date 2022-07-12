@@ -1,0 +1,33 @@
+classdef Readings
+    
+    properties
+        readings;
+        lidarPose;
+    end
+    
+    methods (Static)
+        function r = newReadings(ranges, angles, lidarPose)
+            r = Readings;
+            r.readings = [ranges', angles'];
+            r.lidarPose = lidarPose;
+        end
+    end
+    
+    methods
+        function [x, y] = toRectangular(readings)
+            ranges = readings(:, 1);
+            angles = readings(:, 2);
+            x_lidar = readings.lidarPose(1);
+            y_lidar = readings.lidarPose(2);
+            theta_lidar = readings.lidarPose(3);
+            x = x_lidar + ranges.*cos(theta_lidar + angles);
+            y = y_lidar + ranges.*sin(theta_lidar + angles);
+        end
+        
+        function r = getValidReadings(readings)
+        valid_ranges = logical((current_map.XWorldLimits(1) < x_z).*(current_map.XWorldLimits(2) > x_z).*(current_map.YWorldLimits(1) < y_z).*(current_map.YWorldLimits(2) > y_z));
+   
+        end
+    end
+end
+

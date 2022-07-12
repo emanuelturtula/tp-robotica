@@ -97,6 +97,7 @@ dimensiones.PosicionLidarRobot = [0, 0, 0.15];
 
 % Inicializamos el robot en el modo que corresponda
 robot = Robot.NuevoRobot(dimensiones, initPose, c.vigilancia);
+robot = robot.AttachLidar(lidar);
 % Inicializamos las particulas y las guardamos en el robot
 particulas = inicializar_particulas(10, map, 1);
 robot = robot.GuardarParticulas(particulas);
@@ -173,9 +174,9 @@ for idx = 2:numel(tVec)
     %% COMPLETAR ACA:
         % hacer algo con la medicion del lidar (ranges) y con el estado
         % actual de la odometria ( pose(:,idx) )
-        robot = robot.ActualizarParticulas(ranges, map);
-        [posEstimada, varEstimada] = robot.EstimarPosicion();
-        pose(:,idx) = posEstimada;
+%         robot = robot.ActualizarParticulas(ranges, map);
+%         [posEstimada, varEstimada] = robot.EstimarPosicion();
+%         pose(:,idx) = posEstimada;
         
         % Fin del COMPLETAR ACA
         

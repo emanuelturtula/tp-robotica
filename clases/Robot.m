@@ -3,117 +3,114 @@
 classdef Robot
     properties (Access = private)
         % Describe las dimensiones del robot
-        dimensiones = DimensionesRobot;
+        dimensions = DimensionesRobot;
         % Describe la pose actual
-        poseInicial = [0,0,0];
+        initialPose = [0,0,0];
         % Describe si está en modo vigilancia o exploración
-        modoVigilancia = false; 
-        particulas;
+        vigilanceMode = false; 
+        particles;
         lidar;
     end
     
     methods (Static)
-        function robot = NuevoRobot(dimensiones, poseInicial, modo, lidar)  
+        function robot = newRobot(dimensions, initialPose, mode)  
             arguments
-                dimensiones DimensionesRobot
-                poseInicial (1,:) {mustBeNumeric}
-                modo {mustBeNumericOrLogical};
-                lidar Lidar
+                dimensions DimensionesRobot
+                initialPose (1,:) {mustBeNumeric}
+                mode {mustBeNumericOrLogical};
             end
             
             robot = Robot;
-            robot.dimensiones = dimensiones;
-            robot.poseInicial = poseInicial;
-            robot.modoVigilancia = modo;
-            robot.lidar = lidar;
+            robot.dimensions = dimensions;
+            robot.initialPose = initialPose;
+            robot.vigilanceMode = mode;
         end
     end  
     
     methods
-        function [posEstimada, varEstimada] = EstimarPosicion(robot)
-            poseX = [robot.particulas(:).pose(1)]';
-            poseY = [robot.particulas(:).pose(2)]';
-            poseT = [robot.particulas(:).pose(3)]';
-            pesos = [robot.particulas(:).weight];
-
-            posEstimada(:, 1) = pesos*poseX;
-            posEstimada(:, 2) = pesos*poseY;
-            posEstimada(:, 3) = wrapTo2Pi(pesos*poseT);
-
-            varEstimada = var([poseX, poseY, poseT], pesos);
-        end
-               
-        function robot = GuardarParticulas(robot, particulas)
+        function robot = attachLidar(robot, lidar)
             arguments
                 robot Robot
-                particulas (1,:) Particula
+                lidar LidarSensor
+            end
+            robot.lidar = lidar;
+        end
+        
+        function [pos, variance] = estimatePosition(robot)
+            poseX = robot.particles(:).pose(1)';
+            poseY = robot.particles(:).pose(2)';
+            poseT = robot.particles(:).pose(3)';
+            pesos = robot.particles(:).weight;
+
+            pos(:, 1) = pesos*poseX;
+            pos(:, 2) = pesos*poseY;
+            pos(:, 3) = wrapTo2Pi(pesos*poseT);
+
+            variance = variance([poseX, poseY, poseT], pesos);
+        end
+               
+        function robot = setParticles(robot, particles)
+            arguments
+                robot Robot
+                particles (1,:) Particula
             end
             
-            robot.particulas = particulas;
+            robot.particles = particles;
         end
         
-        function particulas = LeerParticulas(robot)
-            particulas = robot.particulas;
+        function particulas = getParticles(robot)
+            particulas = robot.particles;
         end
-        
-%         function [v_cmd, w_cmd] = GenerarVelocidades(robot)
-%             arguments
-%                 robot Robot
-%             end
-%             
-%             
-%         end
-        
-        function robot = ActualizarParticulasConMediciones(robot, mediciones, mapa, mapa_likelihood)
+                
+        function robot = updateParticlesWithRanges(robot, ranges, map, likelihood_map)
+            % TODO: Agregar validacion de parametros
             % TODO: Agregar el descartado de mediciones < 20cm 
             % (por los postes del robot)
             % TODO: Ver que pasa cuando usamos la roomba
             % TODO: Las mediciones están respecto al lidar. Hay que
-            % pasarlas a la terna del robot.
+            % pasarlas a la terna del global.
             
-            robot.calcularParticulasDesdeMediciones(robot.particulas, mediciones, mapa, mapa_likelihood)
+            newParticles = robot.particles;
             
-        end
-    end
-    
-    methods (Access = private)
-        function particulasNuevas = calcularParticulasDesdeMediciones(robot, mediciones, mapa, mapa_likelihood)
-        
-                % Filtramos las mediciones
-                mediciones = mediciones(1:end-1);
-                angulosEscaneo = robot.lidar.scanAngles(1:end-1);
-                angulosEscaneo = robot.lidar.scanAngles(~isnan(mediciones));
-                mediciones = mediciones(~isnan(mediciones));
-            
-                particulasNuevas = robot.particulas;
-                sigma = 0.2;
-                p_norm = normpdf(0, 0, sigma);
-                p_arbitraria = 0.01;
-                Rt = 0.35/2;
-                res = map.Resolution;
-                epsilon = exp(-14);
-        
-                % Para cada una de las particulas
-                for k = 1:numel(particles)
-                    x = particulasNuevas(k).pose(1);
-                    y = particulasNuevas(k).pose(2);
-                    theta = particulasNuevas(k).pose(3);
-                    offsetVec = [cos(theta) -sin(theta);
-                                 sin(theta)  cos(theta)]*robot.lidar.sensorOffset';
-                    
-                    sensorLoc = [x, y] + offsetVec';
-                    sensorPose = [sensorLoc, theta + robot.lidar.sensorAngleOffset];
-                    
-                    x_z_lidar = sensorPose(1) + mediciones.*cos(sensorPose(3) + scanAngles');
-                    y_z_lidar = sensorPose(2) + mediciones.*sin(sensorPose(3) + scanAngles');
-                    
-                    particulasNuevas(k).peso = 1;
+            % ranges: es un conjunto de mediciones tomadas por el lidar. Tienen
+            % que estar en la terna global, y cada elemento debe contar con una 
+            % coordenada X e Y. Las mediciones tienen que ser validadas
+            % anteriormente (no pueden estar por fuera del mapa)
 
-                    x_z = [x_z_lidar; x];
-                    y_z = [y_z_lidar; y];
+            % map: es el mapa provisto en el enunciado
+
+            % likelihood_map: un mapa con la probabilidad de encontrar un 
+            % obstáculo (generado a partir del mapa del enunciado)
+
+            sigma = 0.2;
+            epsilon = exp(-14);
+
+            for n = 1:numel(newParticles)
+                newParticles(n).weight = 1;
+                % Si la particula es valida (está dentro de los limites del
+                % mapa), continuo
+                if newParticles(n).isValid(map) 
+                    % Obtengo la pose de la particula, del lidar y las
+                    % mediciones vistas desde la particula
+                    particlePose = newParticles(n).pose;
+                    [lidarPose, scanAngles] = newParticles(n).getLidarPoseAndScanAngles();
+                    readings = Readings.newReadings(ranges, scanAngles, lidarPose);
+                    % Obtengo las lecturas validas en coordenadas
+                    % cartesianas vistas desde la particula
+                    [x, y] = readings.getValidReadingsInRectangular(map);
+                    x_z = [x; particlePose(1)];
+                    y_z = [y; particlePose(2)];
+                    
+                    
+                    probabilities = ones(1, length(ranges));
+                    grid
+                else
+                    newParticles(n).weight = epsilon;
                 end
+                
+                world2grid
+            end
+            
         end
-         
     end
 end
-
