@@ -3,14 +3,15 @@ classdef Particle
     properties
         weight = 0;
         pose = [0,0,0];
-        lidar;
+        lidar = LidarSensor;
     end
   
     methods (Static)
         function particle = newParticle(lidar)
             arguments
-                lidar Lidar
+                lidar LidarSensor
             end
+            particle = Particle;
             particle.lidar = lidar;
         end
         
@@ -29,8 +30,9 @@ classdef Particle
                 poses(1 + (k - 1)*amount/n_angle:k*amount/n_angle, 3) = angle_vector(k);
             end
 
-            particles = repmat(Particle.newParticle(lidar), amount, 1);
+            particles(1:amount) = Particle;
             for i = 1:length(poses(:,1))
+                particles(i) = Particle.newParticle(lidar);
                 particles(i).pose = poses(i,:);
             end
         end
@@ -63,6 +65,8 @@ classdef Particle
             % particulas poseen un lidar también. Al tomar mediciones, hay 
             % que transformarlas a la terna de la particula, por lo que
             % necesitamos estos datos del lidar
+            sensorAngleOffset = 0;
+            
             x = particle.pose(1);
             y = particle.pose(2);
             theta = particle.pose(3);
@@ -70,7 +74,7 @@ classdef Particle
                          sin(theta)  cos(theta)]*particle.lidar.sensorOffset';
 
             sensorLoc = [x, y] + offsetVec';
-            sensorPose = [sensorLoc, theta + particle.lidar.sensorAngleOffset];
+            sensorPose = [sensorLoc, theta + sensorAngleOffset];
             scanAngles = particle.lidar.scanAngles;
         end
     end

@@ -37,6 +37,7 @@ end
 
 %% Creacion del entorno
 load 2021_2c_tp_map.mat     %carga el mapa como occupancyMap en la variable 'map'
+load likelihood_map.mat     %carga el likelihoodMap en la variable 'likelihood_map'
 
 if verMatlab.Release=='(R2016b)'
     %Para versiones anteriores de MATLAB, puede ser necesario ajustar mapa
@@ -89,18 +90,17 @@ R = 0.072/2;                % Radio de las ruedas [m]
 L = 0.235;                  % Distancia entre ruedas [m]
 dd = DifferentialDrive(R,L); % creacion del Simulador de robot diferencial
 % Este robot es una representacion de la roomba.
-dimensiones = DimensionesRobot;
-dimensiones.DiametroTotal = 0.35;
-dimensiones.DistanciaEntreRuedas = 0.235;
-dimensiones.DiametroRuedas = 0.072;
-dimensiones.PosicionLidarRobot = [0, 0, 0.15];
+dimensions = RobotDimensions;
+dimensions.TotalDiameter = 0.35;
+dimensions.WheelDistance = 0.235;
+dimensions.WheelDiameter = 0.072;
+dimensions.LidarLocation = [0, 0, 0.15];
 
 % Inicializamos el robot en el modo que corresponda
-robot = Robot.NuevoRobot(dimensiones, initPose, c.vigilancia);
-robot = robot.AttachLidar(lidar);
+robot = Robot.newRobot(dimensions, initPose, c.vigilancia, lidar);
 % Inicializamos las particulas y las guardamos en el robot
-particulas = inicializar_particulas(10, map, 1);
-robot = robot.GuardarParticulas(particulas);
+particles = Particle.initRandomParticles(250, map, 1, lidar);
+robot = robot.setParticles(particles);
 
 %% Simulacion
 
@@ -174,6 +174,9 @@ for idx = 2:numel(tVec)
     %% COMPLETAR ACA:
         % hacer algo con la medicion del lidar (ranges) y con el estado
         % actual de la odometria ( pose(:,idx) )
+        
+        robot = robot.updateParticlesWithRanges(ranges, map, likelihood_map);
+        
 %         robot = robot.ActualizarParticulas(ranges, map);
 %         [posEstimada, varEstimada] = robot.EstimarPosicion();
 %         pose(:,idx) = posEstimada;
@@ -182,7 +185,10 @@ for idx = 2:numel(tVec)
         
     %%
     % actualizar visualizacion
-    viz(pose(:,idx),ranges)
+    %viz(pose(:,idx),ranges)
     waitfor(r);
 end
+
+
+
 

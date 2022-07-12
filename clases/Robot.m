@@ -3,7 +3,7 @@
 classdef Robot
     properties (Access = private)
         % Describe las dimensiones del robot
-        dimensions = DimensionesRobot;
+        dimensions = RobotDimensions;
         % Describe la pose actual
         initialPose = [0,0,0];
         % Describe si está en modo vigilancia o exploración
@@ -13,17 +13,19 @@ classdef Robot
     end
     
     methods (Static)
-        function robot = newRobot(dimensions, initialPose, mode)  
+        function robot = newRobot(dimensions, initialPose, mode, lidar)  
             arguments
-                dimensions DimensionesRobot
+                dimensions RobotDimensions
                 initialPose (1,:) {mustBeNumeric}
-                mode {mustBeNumericOrLogical};
+                mode {mustBeNumericOrLogical}
+                lidar LidarSensor
             end
             
             robot = Robot;
             robot.dimensions = dimensions;
             robot.initialPose = initialPose;
             robot.vigilanceMode = mode;
+            robot.lidar = lidar;
         end
     end  
     
@@ -52,7 +54,7 @@ classdef Robot
         function robot = setParticles(robot, particles)
             arguments
                 robot Robot
-                particles (1,:) Particula
+                particles (1,:) Particle
             end
             
             robot.particles = particles;
@@ -100,10 +102,8 @@ classdef Robot
                     [x, y] = readings.getValidReadingsInRectangular(map);
                     x_z = [x; particlePose(1)];
                     y_z = [y; particlePose(2)];
-                    
-                    
                     probabilities = ones(1, length(ranges));
-                    grid
+                    grid_xyz = world2grid(map, [x_z, y_z]);
                 else
                     newParticles(n).weight = epsilon;
                 end

@@ -9,9 +9,31 @@ classdef Particle
     methods (Static)
         function particle = newParticle(lidar)
             arguments
-                lidar Lidar
+                lidar LidarSensor
             end
             particle.lidar = lidar;
+        end
+        
+        function particles = initRandomParticles(amount, map, n_angle, lidar)
+            poses = [
+                unifrnd(map.XWorldLimits(1) + 1, map.XWorldLimits(2) - 1, amount/n_angle, 1), ...
+                unifrnd(map.YWorldLimits(1) + 1, map.YWorldLimits(2) - 1, amount/n_angle, 1), ...
+                unifrnd(-pi, pi, amount/n_angle, 1)
+            ];
+
+            poses = repmat(poses, n_angle, 1);
+
+            angle_vector = linspace(-pi, pi - pi/n_angle, n_angle);
+
+            for k = 1:n_angle
+                poses(1 + (k - 1)*amount/n_angle:k*amount/n_angle, 3) = angle_vector(k);
+            end
+
+            particles = Particle.empty(amount);
+            for i = 1:length(poses(:,1))
+                particles(i) = Particle.newParticle(lidar);
+                particles(i).pose = poses(i,:);
+            end
         end
     end
     
@@ -41,12 +63,14 @@ classdef Particle
             % Cada particula es una 'instancia' de un robot, por lo que las
             % particulas poseen un lidar también. Al tomar mediciones, hay 
             % que transformarlas a la terna de la particula, por lo que
-            % necesitamos estos datos del sensor
+            % necesitamos estos datos del lidar
+            x = particle.pose(1);
+            y = particle.pose(2);
             theta = particle.pose(3);
             offsetVec = [cos(theta) -sin(theta);
                          sin(theta)  cos(theta)]*particle.lidar.sensorOffset';
 
-            sensorLoc = [particles(k).pose_x, particles(k).pose_y] + offsetVec';
+            sensorLoc = [x, y] + offsetVec';
             sensorPose = [sensorLoc, theta + particle.lidar.sensorAngleOffset];
             scanAngles = particle.lidar.scanAngles;
         end
