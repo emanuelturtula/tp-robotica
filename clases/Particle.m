@@ -1,9 +1,13 @@
 classdef Particle
-
+    % Particle es una representación de una partícula. La partícula es una
+    % "instancia" del robot, por lo que tiene una pose, y tiene un sensor
+    % lidar attacheado. También posee mediciones en su terna.
+       
     properties
         weight = 0;
         pose = [0,0,0];
         lidar = LidarSensor;
+        ranges;
     end
   
     methods (Static)
@@ -40,6 +44,8 @@ classdef Particle
     
     methods 
         function result = isValid(particle, map)
+            % Devuelve true si la particula está dentro del mapa. Caso
+            % contrario, devuelve false
             arguments
                 particle Particle
                 map occupancyMap
@@ -60,6 +66,31 @@ classdef Particle
             result = false;
         end
         
+        function particle = setRanges(particle, lidarRanges, map)
+            % setRanges toma las mediciones en la terna del lidar
+            % y guarda las mediciones en coordenadas cartesianas de la
+            % terna de la partícula. Utiliza el mapa para solo guardar
+            % mediciones válidas
+           
+            [sensorPose, scanAngles] = particle.getLidarPoseAndScanAngles();
+            
+            % Se filtran las mediciones inválidas
+            lidarRanges = lidarRanges(~isnan(lidarRanges(1:end - 1)));
+            scanAngles = scanAngles(~isnan(scanAngles(1:end - 1)));
+            
+            x_z = sensorPose(1) + lidarRanges.*cos(sensorPose(3) + scanAngles');
+            y_z = sensorPose(2) + lidarRanges.*sin(sensorPose(3) + scanAngles');
+            
+            validRanges = logical((map.XWorldLimits(1) < x_z).*...
+                                  (map.XWorldLimits(2) > x_z).*...
+                                  (map.YWorldLimits(1) < y_z).*...
+                                  (map.YWorldLimits(2) > y_z));
+                              
+            particle.ranges = [x_z(validRanges), y_z(validRanges)];             
+        end
+    end
+    
+    methods (Access = private)
         function [sensorPose, scanAngles] = getLidarPoseAndScanAngles(particle)
             % Cada particula es una 'instancia' de un robot, por lo que las
             % particulas poseen un lidar también. Al tomar mediciones, hay 

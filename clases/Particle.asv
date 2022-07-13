@@ -1,9 +1,13 @@
 classdef Particle
-
+    % Particle es una representación de una partícula. La partícula es una
+    % "instancia" del robot, por lo que tiene una pose, y tiene un sensor
+    % lidar attacheado. También posee mediciones en su terna.
+       
     properties
         weight = 0;
         pose = [0,0,0];
-        lidar;
+        lidar = LidarSensor;
+        ranges;
     end
   
     methods (Static)
@@ -11,6 +15,7 @@ classdef Particle
             arguments
                 lidar LidarSensor
             end
+            particle = Particle;
             particle.lidar = lidar;
         end
         
@@ -29,7 +34,7 @@ classdef Particle
                 poses(1 + (k - 1)*amount/n_angle:k*amount/n_angle, 3) = angle_vector(k);
             end
 
-            particles = Particle.empty(amount);
+            particles(1:amount) = Particle;
             for i = 1:length(poses(:,1))
                 particles(i) = Particle.newParticle(lidar);
                 particles(i).pose = poses(i,:);
@@ -39,6 +44,8 @@ classdef Particle
     
     methods 
         function result = isValid(particle, map)
+            % Devuelve true si la particula está dentro del mapa. Caso
+            % contrario, devuelve false
             arguments
                 particle Particle
                 map occupancyMap
@@ -59,11 +66,23 @@ classdef Particle
             result = false;
         end
         
+        function particle = setRanges(particle, lidarRanges, scanAngles)
+            % setRanges toma las mediciones en la terna 
+            sensorPose = particle.getLidarPoseAndScanAngles();
+            
+            x_z = sensorPose(1) + globalRanges.*cos(sensorPose(3) + scanAngles');
+            y_z = sensorPose(2) + globalRanges.*sin(sensorPose(3) + scanAngles');
+        end
+    end
+    
+    methods (Access = private)
         function [sensorPose, scanAngles] = getLidarPoseAndScanAngles(particle)
             % Cada particula es una 'instancia' de un robot, por lo que las
             % particulas poseen un lidar también. Al tomar mediciones, hay 
             % que transformarlas a la terna de la particula, por lo que
             % necesitamos estos datos del lidar
+            sensorAngleOffset = 0;
+            
             x = particle.pose(1);
             y = particle.pose(2);
             theta = particle.pose(3);
@@ -71,7 +90,7 @@ classdef Particle
                          sin(theta)  cos(theta)]*particle.lidar.sensorOffset';
 
             sensorLoc = [x, y] + offsetVec';
-            sensorPose = [sensorLoc, theta + particle.lidar.sensorAngleOffset];
+            sensorPose = [sensorLoc, theta + sensorAngleOffset];
             scanAngles = particle.lidar.scanAngles;
         end
     end

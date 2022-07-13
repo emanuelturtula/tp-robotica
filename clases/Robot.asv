@@ -3,7 +3,7 @@
 classdef Robot
     properties (Access = private)
         % Describe las dimensiones del robot
-        dimensions = DimensionesRobot;
+        dimensions = RobotDimensions;
         % Describe la pose actual
         initialPose = [0,0,0];
         % Describe si está en modo vigilancia o exploración
@@ -13,17 +13,19 @@ classdef Robot
     end
     
     methods (Static)
-        function robot = newRobot(dimensions, initialPose, mode)  
+        function robot = newRobot(dimensions, initialPose, mode, lidar)  
             arguments
-                dimensions DimensionesRobot
+                dimensions RobotDimensions
                 initialPose (1,:) {mustBeNumeric}
-                mode {mustBeNumericOrLogical};
+                mode {mustBeNumericOrLogical}
+                lidar LidarSensor
             end
             
             robot = Robot;
             robot.dimensions = dimensions;
             robot.initialPose = initialPose;
             robot.vigilanceMode = mode;
+            robot.lidar = lidar;
         end
     end  
     
@@ -52,7 +54,7 @@ classdef Robot
         function robot = setParticles(robot, particles)
             arguments
                 robot Robot
-                particles (1,:) Particula
+                particles (1,:) Particle
             end
             
             robot.particles = particles;
@@ -62,6 +64,38 @@ classdef Robot
             particulas = robot.particles;
         end
                 
+        function robot = updateParticlesWithOdometry(robot, u)
+            oldParticles = robot.particles;
+            count = numel(oldParticles);
+            particlePoses = repmat([0,0,0], count, 1);
+            % TODO: Ver como desaparecer este for
+            for i = 1:count
+                particlePoses(i, :) = oldParticles(i).pose;
+            end
+            
+            odom = repmat([u(1), u(2), u(3)], count, 1);
+            %TODO: Implementar funcionalidad para cuando se usa la roomba
+            %if ~use_roomba 
+            % HACER X COSA
+            %end
+            
+            particlePoses = particlePoses + [
+                odom(:, 1).*cos(particlePoses(:, 3) + odom(:, 2)), ...
+                odom(:, 1).*sin(particlePoses(:, 3) + odom(:, 2)), ...
+                odom(:, 2) + odom(:, 3)
+            ]; 
+            
+            newParticles = oldParticles;
+            % TODO: Ver como desaparecer este for
+            for n = 1:count
+                newParticles(i).pose(1) = deal(aux_x{i});
+                newParticles(i).pose(2) = deal(aux_y{i});
+                newParticles(i).pose(3) = deal(aux_t{i});
+            end
+
+            robot.particles = newParticles;
+        end
+        
         function robot = updateParticlesWithRanges(robot, ranges, map, likelihood_map)
             % TODO: Agregar validacion de parametros
             % TODO: Agregar el descartado de mediciones < 20cm 
@@ -84,33 +118,107 @@ classdef Robot
 
             sigma = 0.2;
             epsilon = exp(-14);
-
+            delta_R = 0.02;
+            Rt = 0.35/2;
+            p_norm = normpdf(0, 0, sigma);
+            p_arbitraria = 0.01;
+            
             for n = 1:numel(newParticles)
+                % Guardo las mediciones en la particula y las adapto a su
+                % terna
+                newParticles(n) = newParticles(n).setRanges(ranges, map);
+                
+                % A priori, su peso será 1
                 newParticles(n).weight = 1;
+                
+                % Obtengo la pose de la particula
+                particlePose = newParticles(n).pose;
+                
                 % Si la particula es valida (está dentro de los limites del
                 % mapa), continuo
-                if newParticles(n).isValid(map) 
-                    % Obtengo la pose de la particula, del lidar y las
-                    % mediciones vistas desde la particula
-                    particlePose = newParticles(n).pose;
-                    [lidarPose, scanAngles] = newParticles(n).getLidarPoseAndScanAngles();
-                    readings = Readings.newReadings(ranges, scanAngles, lidarPose);
-                    % Obtengo las lecturas validas en coordenadas
-                    % cartesianas vistas desde la particula
-                    [x, y] = readings.getValidReadingsInRectangular(map);
-                    x_z = [x; particlePose(1)];
-                    y_z = [y; particlePose(2)];
+                if newParticles(n).isValid(map)                  
+                    % Estos dos vectores terminan siendo coordenadas del
+                    % mapa
+                    x_z = [newParticles(n).ranges(:,1); particlePose(1)];
+                    y_z = [newParticles(n).ranges(:,2); particlePose(2)];
                     
+                    % Se convierten a una grilla relacionada al mapa. 
+                    % Entiendo que eso es básicamente agarrar cada
+                    % coordenada del mapa y mapearlo a una grilla 
+                    % (que depende de la resolucion del mapa)
+                    grid_xy = world2grid_tito(map, [x_z, y_z]);
                     
-                    probabilities = ones(1, length(ranges));
-                    grid
+                    % Esos puntos de la grilla, tienen una correspondencia
+                    % en el mapa de likelihood
+                    likelihoods = likelihood_map(sub2ind(size(likelihood_map), grid_xy(:, 1), grid_xy(:, 2)));
+                    
+                    % Ademas, tenemos un vector de probabilidades, que
+                    % asigna una probabilidad a cada coordenada
+                    p = ones(1, length(x_z));
+                    
+                    % Lo que nos interesa, es la probabilidad de las
+                    % mediciones, es decir, de todos los likelihoods
+                    % excepto el ultimo elemento que es el likelihood de la
+                    % pose de la particula
+                    p(1:end-1) = normpdf(likelihoods(1:end-1), 0, sigma)/p_norm;
+                    
+                    % Calculamos el nuevo peso de la particula
+                    newParticles(n).weight = newParticles(n).weight*prod(p);
+                    
+                    % Si el likelihood de la particula es menor a un número
+                    % (TODO: VER QUE ES ESTE NUMERO), actualizamos el peso
+                    if(likelihoods(end) < Rt + delta_R)
+                        newParticles(n).weight = newParticles(n).weight*(likelihoods(end)/(Rt + delta_R));
+                    end
                 else
+                    % Si la particula no es válida, le damos un peso de
+                    % epsilon
                     newParticles(n).weight = epsilon;
                 end
-                
-                world2grid
+                % TODO: Ver que onda esto que quedo medio falopa, pero la
+                % idea es actualizar el peso en base a una probabilidad
+                % arbitraria.
+                newParticles(n).weight = newParticles(n).weight*p_arbitraria^(length(newParticles(n).ranges(:,1)) - length(x_z) + 1);
+            end
+            w_avg = sum([newParticles(:).weight]);
+            aux_w = num2cell([newParticles(:).weight]/w_avg);
+            [newParticles(:).weight] = deal(aux_w{:});
+            
+            robot.particles = newParticles;
+        end
+        
+        function robot = resampleParticles(robot)
+            oldParticles = robot.particles;
+            newParticles = oldParticles;
+            
+            particleCount = numel(oldParticles);
+            % Valor inicial de U
+            r = rand(1)*particleCount^-1; 
+            % Umbral
+            c = oldParticles(1).weight; 
+            i = 1;
+
+            for m = 1:particleCount
+                U = r + (m - 1)*particleCount^-1;
+                % Cuando supera el umbral avanza a la siguiente partícula
+                while(U > c) 
+                    i = i + 1;
+                    c = c + oldParticles(i).weight;
+                end
+                newParticles(m) = oldParticles(i);
             end
             
+            robot.particles = newParticles;
         end
     end
+end
+
+% TODO: Habría que ver que diferencia con world2grid
+function [grid_pose] = world2grid_tito(map, pose)
+    r = map.Resolution;
+    grid_x = ceil(pose(:, 1)*r);
+    grid_y = map.GridSize(1) - floor(pose(:, 2)*r);
+    grid_x(grid_x == 0) = 1;
+    grid_y(grid_y == 0) = 1;
+    grid_pose = [grid_y, grid_x];
 end

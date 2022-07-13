@@ -110,10 +110,9 @@ else
     r = rateControl(1/sampleTime);  %definicion para R2020a, y posiblemente cualquier version nueva
 end
 
-%% Ploteo de particulas
+%% Plot
 particles_fig = figure('Name', 'Particles', 'Tag', 'Particles');
 particles_ax = axes('Parent', particles_fig);
-particle_viz = ParticleViz;
 
 %% Loop principal
 for idx = 2:numel(tVec)   
@@ -201,7 +200,9 @@ for idx = 2:numel(tVec)
         % Hacemos un resampling
         robot = robot.resampleParticles();
         
-        plot_state(robot.getParticles(), pose(1:2, idx), particles_ax, particles_fig, particle_viz);
+
+        
+        plot_state(new_particles, pose(1:2, idx), est_pos, idx - 1, particles_ax, particles_fig, print_particles, particle_viz);
         
         % Fin del COMPLETAR ACA
         
