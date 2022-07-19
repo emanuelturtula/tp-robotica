@@ -20,7 +20,7 @@ classdef Config
         % Tiempo de muestreo en segundos
         sample_time = 0.1; 
         % Pose inicial (x y theta) del robot simulado (el robot pude arrancar en cualquier lugar valido del mapa)
-        init_pose = [2; 2.5; -pi/2]; 
+        init_pose = [2; 1; 0]; 
     end
 end
 

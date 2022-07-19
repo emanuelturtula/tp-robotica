@@ -8,4 +8,3 @@ classdef ParticleViz
         handle_robot;
     end
 end
-

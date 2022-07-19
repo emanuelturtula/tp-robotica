@@ -5,7 +5,8 @@ clear all
 clc
 
 addpath('simulador')
-addpath('clases')
+addpath('plots')
+addpath('localization')
 addpath('funciones')
 
 verMatlab = ver('MATLAB');   % en MATLAB2020a funciona bien, ajustado para R2016b, los demas a pelearla...
@@ -36,8 +37,7 @@ end
     
 
 %% Creacion del entorno
-load 2021_2c_tp_map.mat     %carga el mapa como occupancyMap en la variable 'map'
-load likelihood_map.mat     %carga el likelihoodMap en la variable 'likelihood_map'
+load mapa_2022_1c.mat     %carga el mapa como occupancyMap en la variable 'map'
 
 if verMatlab.Release=='(R2016b)'
     %Para versiones anteriores de MATLAB, puede ser necesario ajustar mapa
@@ -55,8 +55,8 @@ lidar = LidarSensor;
 lidar.sensorOffset = [0,0];   % Posicion del sensor en el robot (asumiendo mundo 2D)
 scaleFactor = 3;                %decimar lecturas de lidar acelera el algoritmo
 num_scans = 513/scaleFactor;
-hokuyo_step_a = deg2rad(-90);
-hokuyo_step_c = deg2rad(90);
+hokuyo_step_a = deg2rad(-180);
+hokuyo_step_c = deg2rad(180);
 
 lidar.scanAngles = linspace(hokuyo_step_a,hokuyo_step_c,num_scans);
 lidar.maxRange = 5;
@@ -89,18 +89,9 @@ pose(:,1) = initPose;
 R = 0.072/2;                % Radio de las ruedas [m]
 L = 0.235;                  % Distancia entre ruedas [m]
 dd = DifferentialDrive(R,L); % creacion del Simulador de robot diferencial
-% Este robot es una representacion de la roomba.
-dimensions = RobotDimensions;
-dimensions.TotalDiameter = 0.35;
-dimensions.WheelDistance = 0.235;
-dimensions.WheelDiameter = 0.072;
-dimensions.LidarLocation = [0, 0, 0.15];
 
-% Inicializamos el robot en el modo que corresponda
-robot = Robot.newRobot(dimensions, initPose, c.vigilancia, lidar);
-% Inicializamos las particulas y las guardamos en el robot
-particles = Particle.initRandomParticles(250, map, 1, lidar);
-robot = robot.setParticles(particles);
+%% Filtro de particulas
+localizer = CustomParticleFilter(map, lidar);
 
 %% Simulacion
 
@@ -110,10 +101,11 @@ else
     r = rateControl(1/sampleTime);  %definicion para R2020a, y posiblemente cualquier version nueva
 end
 
-%% Ploteo de particulas
-particles_fig = figure('Name', 'Particles', 'Tag', 'Particles');
-particles_ax = axes('Parent', particles_fig);
-particle_viz = ParticleViz;
+%% Gráficos
+%Figura para las partículas
+figureName = 'Particles';
+figureTag = 'Particles';
+particlesFig = figure('Name', figureName, 'Tag', figureTag);
 
 %% Loop principal
 for idx = 2:numel(tVec)   
@@ -124,11 +116,12 @@ for idx = 2:numel(tVec)
     % mejora las mediciones.   
     v_cmd = vxRef(idx-1);   % estas velocidades estan como ejemplo ...
     w_cmd = wRef(idx-1);    %      ... para que el robot haga algo.
-    
+%     v_cmd = 0;
+%     w_cmd = 0;
     %% COMPLETAR ACA:
         % generar velocidades para este timestep
         % fin del COMPLETAR ACA
-    
+
     %% a partir de aca el robot real o el simulador ejecutan v_cmd y w_cmd:
     
     if use_roomba       % para usar con el robot real
@@ -176,39 +169,29 @@ for idx = 2:numel(tVec)
     % Aca el robot ya ejecutó las velocidades comandadas y devuelve en la
     % variable ranges la medicion del lidar para ser usada y
     % en la variable pose(:,idx) la odometría actual.
-    
+    viz(pose(:,idx),ranges)
+    waitfor(r);
     %% COMPLETAR ACA:
         % hacer algo con la medicion del lidar (ranges) y con el estado
-        % actual de la odometria ( pose(:,idx) )
+        % actual de la odometria ( pose(:,idx) )     
         
         % Armamos la información de odometria
-        x_n = pose(1, idx);
-        x_n_ant = pose(1, idx - 1);
-        y_n = pose(2, idx);
-        y_n_ant = pose(2, idx - 1);
-        theta_n = pose(3, idx);
-        theta_n_ant = pose(3, idx - 1);
+        odometry = Odometry(pose(:, idx), pose(:, idx-1));
         
-        dtr = sqrt((x_n - x_n_ant)^2 + (y_n - y_n_ant)^2);
-        dr1 = atan2(y_n - y_n_ant, x_n - x_n_ant) - theta_n_ant;
-        dr2 = wrapToPi(theta_n - theta_n_ant - dr1);
-        odometry = [dtr, dr1, dr2];
+        % Filtramos mediciones inválidas
+        ranges = ranges(1:end - 1);
+        scanAngles = lidar.scanAngles(1:end - 1);
+        scanAngles = scanAngles(~isnan(ranges));
+        ranges = ranges(~isnan(ranges));
         
-        % Hacemos el paso de predicción
-        robot = robot.updateParticlesWithOdometry(odometry);
-        % Hacemos el paso de corrección
-        robot = robot.updateParticlesWithRanges(ranges, map, likelihood_map);
-        % Hacemos un resampling
-        robot = robot.resampleParticles();
-        
-        plot_state(robot.getParticles(), pose(1:2, idx), particles_ax, particles_fig, particle_viz);
-        
+        localizer = localizer.localize(odometry, ranges);     
+        localizer.plotParticles(particlesFig, pose(:, idx));
+                
         % Fin del COMPLETAR ACA
         
     %%
     % actualizar visualizacion
-    viz(pose(:,idx),ranges)
-    waitfor(r);
+
 end
 
 
