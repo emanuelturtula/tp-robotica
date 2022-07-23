@@ -1,28 +1,18 @@
 classdef heuristic
     
     properties
-       cell;
-       goal;
-       patrullaje;
-    end
-    
-    properties
-       h_factor;
+       factor;
        heuristic_;
     end
     
     methods
-        function obj = h_factor_set(obj, patrullaje)
+        function obj = heuristic(patrullaje,cell,goal)
             if(patrullaje)
-                obj.h_factor = 5;
+                obj.factor = 5;
             else
-                obj.h_factor = 0.75;
+                obj.factor = 0.75;
             end
-        end
-        function obj = heuristic_met(obj,cell,goal)
-            %obj.h_factor = h_factor_set(obj, patrullaje);
-            obj.heuristic_ = cell * goal;
-            %obj.heuristic_ = (sqrt(norm(cell(1) - goal(1))^2 + norm(cell(2) - goal(2))^2))*obj.h_factor; 
+            obj.heuristic_ = (sqrt(norm(cell(1) - goal(1))^2 + norm(cell(2) - goal(2))^2))*obj.factor;
         end
     end
 end
