@@ -24,6 +24,14 @@ classdef CustomParticleFilter
     end
     
     methods
+        function obj = get_weigths(obj)
+            obj = obj.particles(:).weight;
+        end
+        
+        function obj = get_particles(obj,max_w)
+            obj = obj.particles(max_w);
+        end
+        
         function obj = CustomParticleFilter(map, lidar)
             arguments 
                 map occupancyMap
@@ -271,8 +279,6 @@ classdef CustomParticleFilter
             obj.estimatedPose = estPos;
             obj.estimatedVar = varPos;
         end
-               
-
     end
 end
 

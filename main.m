@@ -5,9 +5,10 @@ clear all
 clc
 
 addpath('simulador')
-addpath('plots')
+%addpath('plots')
 addpath('localization')
-addpath('funciones')
+%addpath('funciones')
+addpath('planning')
 
 verMatlab = ver('MATLAB');   % en MATLAB2020a funciona bien, ajustado para R2016b, los demas a pelearla...
 
@@ -68,6 +69,9 @@ attachLidarSensor(viz,lidar);
 
 %% Parametros de la Simulacion
 
+% Inicializar likelihood field
+load('likelihood_map', 'likelihood_map') % de donde sacaron esto
+
 simulationDuration = c.simulation_duration;          % Duracion total [s]
 sampleTime = c.sample_time;                   % Sample time [s]
 initPose = c.init_pose;         % Pose inicial (x y theta) del robot simulado (el robot pude arrancar en cualquier lugar valido del mapa)
@@ -93,6 +97,26 @@ dd = DifferentialDrive(R,L); % creacion del Simulador de robot diferencial
 %% Filtro de particulas
 localizer = CustomParticleFilter(map, lidar);
 
+
+%% variables de planeamiento
+goals = [1.5 1.3; 4.3 2.1];
+goal_grid = world2grid_(map,goals);
+goal_idx = 1;
+goal_reached = false;
+path_threshold = 0.5;
+goal_threshold = 0.08;
+path_world = 0;
+sim_pos = initPose;
+final_point = false;
+new_plan = true;
+patrullaje = true;
+if(~patrullaje)
+    new_plan = false;
+    first_exploration_plan = true;
+end
+success = false;
+collision = false;
+n_plan = 0;
 %% Simulacion
 
 if verMatlab.Release=='(R2016b)'
@@ -106,7 +130,13 @@ end
 figureName = 'Particles';
 figureTag = 'Particles';
 particlesFig = figure('Name', figureName, 'Tag', figureTag);
-
+figureName = 'planning';
+figureTag = 'planning';
+planningFig = figure('Name', figureName, 'Tag', figureTag);
+planning_ax = axes('Parent', planningFig);
+show(map, 'Parent', planning_ax);
+print_planning = false;
+show_planning = false;
 %% Loop principal
 for idx = 2:numel(tVec)   
 
@@ -186,7 +216,14 @@ for idx = 2:numel(tVec)
         
         localizer = localizer.localize(odometry, ranges);     
         localizer.plotParticles(particlesFig, pose(:, idx));
-                
+        
+        [estPos, varPos] = localizer.getEstimatedPoseAndVariance();
+        weights = localizer.get_weigths();
+        [~, max_w] = max(weights);
+        particles_max_w = localizer.get_particles(max_w);
+        %[path_grid, path_world] = planning(world2grid_(map, estPos(1:2)), ...
+        %    goal_grid(goal_idx, :), map, likelihood_map, particles_max_w, patrullaje, ...
+        %    idx - 1, planning_ax, planningFig, print_planning, show_planning, estPos(3));
         % Fin del COMPLETAR ACA
         
     %%
