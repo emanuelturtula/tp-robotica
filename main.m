@@ -17,8 +17,6 @@ c = Config();
 simular_ruido_lidar = c.simular_ruido_lidar; %simula datos no validos del lidar real, probar si se la banca
 use_roomba = c.use_roomba;  % false para desarrollar usando el simulador, true para conectarse al robot real
 
-
-
 %% Roomba
 if use_roomba   % si se usa el robot real, se inicializa la conexion    
     rosshutdown
@@ -54,10 +52,10 @@ end
 %% Crear sensor lidar en simulador
 lidar = LidarSensor;
 lidar.sensorOffset = [0,0];   % Posicion del sensor en el robot (asumiendo mundo 2D)
-scaleFactor = 3;                %decimar lecturas de lidar acelera el algoritmo
+scaleFactor = 9;                %decimar lecturas de lidar acelera el algoritmo
 num_scans = 513/scaleFactor;
-hokuyo_step_a = deg2rad(-180);
-hokuyo_step_c = deg2rad(180);
+hokuyo_step_a = deg2rad(-90);
+hokuyo_step_c = deg2rad(90);
 
 lidar.scanAngles = linspace(hokuyo_step_a,hokuyo_step_c,num_scans);
 lidar.maxRange = 5;
@@ -144,10 +142,10 @@ for idx = 2:numel(tVec)
     % -0.5 <= v_cmd <= 0.5 and -4.25 <= w_cmd <= 4.25
     % (mantener las velocidades bajas (v_cmd < 0.1) (w_cmd < 0.5) minimiza vibraciones y
     % mejora las mediciones.   
+    
     v_cmd = vxRef(idx-1);   % estas velocidades estan como ejemplo ...
     w_cmd = wRef(idx-1);    %      ... para que el robot haga algo.
-%     v_cmd = 0;
-%     w_cmd = 0;
+
     %% COMPLETAR ACA:
         % generar velocidades para este timestep
         % fin del COMPLETAR ACA
@@ -199,7 +197,7 @@ for idx = 2:numel(tVec)
     % Aca el robot ya ejecutó las velocidades comandadas y devuelve en la
     % variable ranges la medicion del lidar para ser usada y
     % en la variable pose(:,idx) la odometría actual.
-    viz(pose(:,idx),ranges)
+    %viz(pose(:,idx),ranges)
     waitfor(r);
     %% COMPLETAR ACA:
         % hacer algo con la medicion del lidar (ranges) y con el estado
@@ -209,10 +207,17 @@ for idx = 2:numel(tVec)
         odometry = Odometry(pose(:, idx), pose(:, idx-1));
         
         % Filtramos mediciones inválidas
+        for i = 1:numel(ranges)
+            if ranges(i) < 0.2
+                ranges(i) = NaN;
+            end
+        end
         ranges = ranges(1:end - 1);
         scanAngles = lidar.scanAngles(1:end - 1);
         scanAngles = scanAngles(~isnan(ranges));
         ranges = ranges(~isnan(ranges));
+        
+        
         
         localizer = localizer.localize(odometry, ranges);     
         localizer.plotParticles(particlesFig, pose(:, idx));
