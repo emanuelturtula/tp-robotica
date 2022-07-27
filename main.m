@@ -97,7 +97,8 @@ localizer = CustomParticleFilter(map, lidar);
 
 
 %% variables de planeamiento
-goals = [1.5 1.3; 4.3 2.1];
+goals = [1.5, 1.3; 4.3, 2.1];
+current_map = map;
 goal_grid = world2grid_(map,goals);
 goal_idx = 1;
 goal_reached = false;
@@ -107,7 +108,7 @@ path_world = 0;
 sim_pos = initPose;
 final_point = false;
 new_plan = true;
-patrullaje = true;
+patrullaje = false;
 if(~patrullaje)
     new_plan = false;
     first_exploration_plan = true;
@@ -133,8 +134,8 @@ figureTag = 'planning';
 planningFig = figure('Name', figureName, 'Tag', figureTag);
 planning_ax = axes('Parent', planningFig);
 show(map, 'Parent', planning_ax);
-print_planning = false;
-show_planning = false;
+print_planning = true;
+show_planning = true;
 %% Loop principal
 for idx = 2:numel(tVec)   
 
@@ -222,13 +223,13 @@ for idx = 2:numel(tVec)
         localizer = localizer.localize(odometry, ranges);     
         localizer.plotParticles(particlesFig, pose(:, idx));
         
+        [occGridX, occGridY, N] = getOccupancyGridFromMap(current_map);
         [estPos, varPos] = localizer.getEstimatedPoseAndVariance();
-        weights = localizer.get_weigths();
-        [~, max_w] = max(weights);
-        particles_max_w = localizer.get_particles(max_w);
-        %[path_grid, path_world] = planning(world2grid_(map, estPos(1:2)), ...
-        %    goal_grid(goal_idx, :), map, likelihood_map, particles_max_w, patrullaje, ...
-        %    idx - 1, planning_ax, planningFig, print_planning, show_planning, estPos(3));
+        particles_max_w = localizer.get_max_weigths_particles();
+        [path_grid, path_world] = planning(world2grid_(current_map, estPos(1:2)), ...
+            goal_grid(goal_idx, :), current_map, likelihood_map, particles_max_w, patrullaje, ...
+            idx - 1, planning_ax, planningFig, print_planning, show_planning, estPos(3),occGridX, occGridY, N);
+        
         % Fin del COMPLETAR ACA
         
     %%

@@ -7,6 +7,7 @@ classdef Particle
         theta = 0;
         lidarX;
         lidarY;
+        map;
     end
     
     methods       
@@ -21,6 +22,9 @@ classdef Particle
             end
             
             result = false;
+        end
+        function obj = get_l_map(obj, map)
+            obj = log(map./(1 - map));
         end
     end
 end

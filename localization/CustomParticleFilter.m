@@ -20,18 +20,24 @@ classdef CustomParticleFilter
         distanceMap;
         lidar (1,1) LidarSensor;
         estimatedPose (1,3) double;
-        estimatedVar (1,3) double = [inf, inf, inf]; 
+        estimatedVar (1,3) double = [inf, inf, inf];
     end
     
     methods
-        function obj = get_weigths(obj)
-            obj = obj.particles(:).weight;
+
+        function obj = get_max_weigths_particles(obj)
+            weigths = [obj.particles(:).weight];
+            [~, max_w] = max(weigths);
+            obj = obj.particles(max_w);
+        end
+        
+        function obj = get_l_map(obj)
+           obj = log(obj.map./(1 - obj.map));
         end
         
         function obj = get_particles(obj,max_w)
             obj = obj.particles(max_w);
         end
-        
         function obj = CustomParticleFilter(map, lidar)
             arguments 
                 map occupancyMap

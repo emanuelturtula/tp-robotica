@@ -1,4 +1,4 @@
-function [path_grid, path_world] = planning(start, goal, map, likelihood_map, particle, patrullaje, timestep, planning_ax, planning_fig, print_planning, show_planning, est_t)
+function [path_grid, path_world] = planning(start, goal, map, likelihood_map, particle, patrullaje, timestep, planning_ax, planning_fig, print_planning, show_planning, est_t, occGridX, occGridY, N)
 
 size_x = map.GridSize(2);
 size_y = map.GridSize(1);
@@ -11,7 +11,7 @@ heuristics = zeros(size_y, size_x);
 closed_list = zeros(size_y, size_x);
 
 if(~patrullaje)
-    particle.map = 1 - 1./(1 + exp(particle.l_map));
+    particle.map = 1 - 1./(1 + exp(particle.get_l_map(map.occupancyMatrix)));
     H_map = -(particle.map.*log2(particle.map) + (1 - particle.map).*log2(1 - particle.map));
     H_map(isnan(H_map)) = 0;
     p_bin_threshold = 0.7;
@@ -84,15 +84,15 @@ while((patrullaje && (parent(1) ~= goal(1) || parent(2) ~= goal(2))) || (~patrul
     closed_list(parent(1), parent(2)) = 1;
     
     %get neighbors of parent
-    n = neighbors(parent, [size_y, size_x]);
-    for i = 1:size(n, 1)
-        child = n(i, :);
+    n_neighbors = neighbors(parent, [size_y, size_x]);
+    for i = 1:size(n_neighbors, 1)
+        child = n_neighbors(i, :);
 
         %calculate the cost of reaching the cell
         if(patrullaje)
             child_wall_distance = likelihood_map(child(1), child(2));
         else
-            norms2 = (particle.occupied_grid_x(1:particle.n_occupied_grid) - child(2)).^2 + (particle.occupied_grid_y(1:particle.n_occupied_grid) - child(1)).^2;
+            norms2 = (occGridX(1:N) - child(2)).^2 + (occGridY(1:N) - child(1)).^2;
             child_wall_distance = sqrt(min(norms2))/map.Resolution;
         end
         cost_val = costs(parent(1), parent(2)) + edge_cost(parent, child, child_wall_distance, ...
@@ -157,7 +157,7 @@ if(plot_planning)
 end
 
 if(print_planning)
-    filename = sprintf('plots/planning/planning_%03d.png', timestep);
+    filename = sprintf('planning/planning_%03d.png', timestep);
     print(planning_fig, filename, '-dpng');
 end
 
