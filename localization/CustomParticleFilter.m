@@ -24,20 +24,6 @@ classdef CustomParticleFilter
     end
     
     methods
-
-        function obj = get_max_weigths_particles(obj)
-            weigths = [obj.particles(:).weight];
-            [~, max_w] = max(weigths);
-            obj = obj.particles(max_w);
-        end
-        
-        function obj = get_l_map(obj)
-           obj = log(obj.map./(1 - obj.map));
-        end
-        
-        function obj = get_particles(obj,max_w)
-            obj = obj.particles(max_w);
-        end
         function obj = CustomParticleFilter(map, lidar)
             arguments 
                 map occupancyMap
@@ -56,6 +42,22 @@ classdef CustomParticleFilter
             obj = obj.computeCorrectionStep(rawRanges);
             obj = obj.estimatePosition();
             obj = obj.resample();
+        end
+        
+        function [occGridX, occGridY, occCells] = get_occupancy(obj)
+            occGridX = obj.occGridX;
+            occGridY = obj.occGridY;
+            occCells = obj.occCells;
+        end
+        
+        function obj = get_max_weigths_particles(obj)
+            weigths = [obj.particles(:).weight];
+            [~, max_w] = max(weigths);
+            obj = obj.particles(max_w);
+        end
+        
+        function obj = get_particles(obj,max_w)
+            obj = obj.particles(max_w);
         end
         
         function [estPos, varPos] = getEstimatedPoseAndVariance(obj)

@@ -218,18 +218,16 @@ for idx = 2:numel(tVec)
         scanAngles = scanAngles(~isnan(ranges));
         ranges = ranges(~isnan(ranges));
         
-        
-        
         localizer = localizer.localize(odometry, ranges);     
         localizer.plotParticles(particlesFig, pose(:, idx));
         
-        [occGridX, occGridY, N] = getOccupancyGridFromMap(current_map);
+        [occGridX, occGridY, N] = localizer.get_occupancy();
         [estPos, varPos] = localizer.getEstimatedPoseAndVariance();
         particles_max_w = localizer.get_max_weigths_particles();
         [path_grid, path_world] = planning(world2grid_(current_map, estPos(1:2)), ...
             goal_grid(goal_idx, :), current_map, likelihood_map, particles_max_w, patrullaje, ...
             idx - 1, planning_ax, planningFig, print_planning, show_planning, estPos(3),occGridX, occGridY, N);
-        
+
         % Fin del COMPLETAR ACA
         
     %%
