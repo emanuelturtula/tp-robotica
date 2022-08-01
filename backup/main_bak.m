@@ -119,7 +119,7 @@ if(vigilancia)
     n_particles_init = 2500;
     n_particles = 250;
     n_angle = 10;
-    p_occupied = 0.8;
+    p_occupied = 0.5;
     [aux_grid_x, aux_grid_y] = find(map.occupancyMatrix > p_occupied);
     N = size(aux_grid_x, 1);
     
