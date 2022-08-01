@@ -3,8 +3,8 @@ function l_map = occupancy_grid_mapping(particle, map, red_ranges, scanAngles)
 l_map = particle.l_map;
 pose = [particle.pose_x, particle.pose_y, particle.pose_t];
 
-p_occupied = 0.8;
-p_free = 1-p_occupied;
+p_occupied = 0.58;
+p_free = 0.42;
 p_robot = 0.1;
 p_scan = 0.47;
 Rt = 0.35/2;

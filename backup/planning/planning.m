@@ -1,4 +1,4 @@
-function [path_grid, path_world] = planning(start, goal, map, likelihood_map, particle, patrullaje, timestep, planning_ax, planning_fig, print_planning, show_planning, est_t)
+function [path_grid, path_world] = planning(start, goal, map, likelihood_map, particle, vigilancia, timestep, planning_ax, planning_fig, print_planning, show_planning, est_t)
 
 size_x = map.GridSize(2);
 size_y = map.GridSize(1);
@@ -10,7 +10,7 @@ costs = ones(size_y, size_x)*inf;
 heuristics = zeros(size_y, size_x);
 closed_list = zeros(size_y, size_x);
 
-if(~patrullaje)
+if(~vigilancia)
     particle.map = 1 - 1./(1 + exp(particle.l_map));
     H_map = -(particle.map.*log2(particle.map) + (1 - particle.map).*log2(1 - particle.map));
     H_map(isnan(H_map)) = 0;
@@ -38,7 +38,7 @@ end
 if(plot_planning)
     cla(planning_ax)
     hold(planning_ax, 'on')
-    if(patrullaje)
+    if(vigilancia)
         show(map, 'Parent', planning_ax);
         aux = grid2world(map, goal);
         plot(planning_ax, aux(1), aux(2), '.g', 'MarkerSize', 10);
@@ -58,7 +58,7 @@ parent = start;
 costs(start(1), start(2)) = 0;
 
 %loop until the goal is found
-while((patrullaje && (parent(1) ~= goal(1) || parent(2) ~= goal(2))) || (~patrullaje && ((Hb_map(parent(1), parent(2)) == 0) || norm(parent - start)/map.Resolution < d_threshold)))
+while((vigilancia && (parent(1) ~= goal(1) || parent(2) ~= goal(2))) || (~vigilancia && ((Hb_map(parent(1), parent(2)) == 0) || norm(parent - start)/map.Resolution < d_threshold)))
 
     %generate mask to assign infinite costs for cells already visited
     closed_mask = closed_list;
@@ -85,17 +85,17 @@ while((patrullaje && (parent(1) ~= goal(1) || parent(2) ~= goal(2))) || (~patrul
         child = n(i, :);
 
         %calculate the cost of reaching the cell
-        if(patrullaje)
+        if(vigilancia)
             child_wall_distance = likelihood_map(child(1), child(2));
         else
             norms2 = (particle.occupied_grid_x(1:particle.n_occupied_grid) - child(2)).^2 + (particle.occupied_grid_y(1:particle.n_occupied_grid) - child(1)).^2;
             child_wall_distance = sqrt(min(norms2))/map.Resolution;
         end
         cost_val = costs(parent(1), parent(2)) + edge_cost(parent, child, child_wall_distance, ...
-            [previous_y(parent(1), parent(2)), previous_x(parent(1), parent(2))], patrullaje, est_t);
+            [previous_y(parent(1), parent(2)), previous_x(parent(1), parent(2))], vigilancia, est_t);
 
-        if(patrullaje)
-            heuristic_val = heuristic(child, goal, patrullaje);
+        if(vigilancia)
+            heuristic_val = heuristic(child, goal, vigilancia);
         end
 
         %update cost of cell
