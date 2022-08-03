@@ -1,0 +1,4 @@
+function save_figure(timestep, fig, filename)
+    print(fig, filename, '-dpng');
+end
+
