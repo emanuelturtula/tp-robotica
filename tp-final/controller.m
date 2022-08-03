@@ -31,7 +31,7 @@ v_M_factor = 1.5;
 v_N_factor = 4;
 
 if(~stop_and_turn)
-    v_base = 0.05;
+    v_base = 0.03;
     if(norm_xy_d/dist_min_angosto < 1.5)
         v = v_base*norm_xy_d/dist_min_angosto;
     end
