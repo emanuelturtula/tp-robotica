@@ -19,7 +19,7 @@ use_roomba = false;  % false para desarrollar usando el simulador, true para con
 
 % Esta variable define si el robot está en el modo vigilancia (ejercicio 1)
 % o en el modo exploración (ejercicio 2)
-vigilancia = false;
+vigilancia = true;
 exploracion = ~vigilancia;
 
 % Gráficos
@@ -29,9 +29,9 @@ show_particles = true;
 print_particles = true;
 show_viz = true;
 print_viz = true;
-show_mapping = true;
-print_mapping = true;
-print_final_mapping = true;
+show_mapping = false;
+print_mapping = false;
+print_final_mapping = false;
 
 % Puntos a visitar
 goals = [1.5 1.3;
