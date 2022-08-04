@@ -156,7 +156,7 @@ if(exploracion)
     current_map = u_map;
     
     % Pose inicial fija
-    initPose_particles = [size_x/(2*u_map.Resolution), size_y/(2*u_map.Resolution), 0];
+    initPose_particles = initPose;
     
     % Probabilidad de ocupación
     p_occupied = 0.8;
