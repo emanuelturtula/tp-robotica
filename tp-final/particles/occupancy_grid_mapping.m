@@ -5,14 +5,14 @@ pose = [particle.pose_x, particle.pose_y, particle.pose_t];
 
 p_occupied = 0.8;
 p_free = 1-p_occupied;
-p_robot = 0.1;
-p_scan = 0.47;
+p_robot = 0.2;
+p_scan = 0.35;
 Rt = 0.35/2;
 
-p_clean_threshold = 0.65;
+p_clean_threshold = 0.5;
 l_clean_threshold = log(p_clean_threshold/(1 - p_clean_threshold));
-min_clean_threshold = 0.1;
-clean_factor = 1.2;
+min_clean_threshold = 0.3;
+clean_factor = 1;
 logical_matrix = logical((abs(l_map) < l_clean_threshold).*(abs(l_map) > min_clean_threshold));
 aux = find(logical_matrix);
 l_map(aux) = l_map(aux)/clean_factor;
