@@ -1,10 +1,13 @@
-function [slamObj, exploredMap, slamPoses] = performSlam(slamObj, scans, initPose)
-    slamObj = updateSlamObj(slamObj, scans);
-    [exploredMap, slamPoses] = getExploredMapAndPoses(slamObj);
+function [slamObj, exploredMap, slamPoses] = performSlam(slamObj, scans)
+    exploredMap = 0;
+    addScan(slamObj, scans);
+    %slamObj = updateSlamObj(slamObj, scans);
+    [~, slamPoses]  = scansAndPoses(slamObj);
+    %[exploredMap, slamPoses] = getExploredMapAndPoses(slamObj);
     
     % Este paso no es 100% necesario, pero sirve para la correcta
     % visualización del mapa
-    [exploredMap, slamPoses] = moveMapAndPosesToReference(exploredMap, slamPoses, initPose);
+    %[exploredMap, slamPoses] = moveMapAndPosesToReference(exploredMap, slamPoses);
 end
 
 function slamObj = updateSlamObj(slamObj, scans)
@@ -16,9 +19,7 @@ function [exploredMap, poses] = getExploredMapAndPoses(slamObj)
     exploredMap = buildMap(scans, poses, slamObj.MapResolution, slamObj.MaxLidarRange);
 end
 
-function [exploredMap, poses] = moveMapAndPosesToReference(exploredMap, poses, initPose)
-    poses(end,:) = poses(end,:) + initPose(:)';
-    exploredMap.GridLocationInWorld = exploredMap.GridLocationInWorld + initPose(1:2)';
-%     exploredMap.XWorldLimits = [0, 6.04];
-%     exploredMap.YWorldLimits = [0, 5.04];
+function [exploredMap, poses] = moveMapAndPosesToReference(exploredMap, poses)
+    poses(end,:) = poses(end,:);
+    exploredMap.GridLocationInWorld = exploredMap.GridLocationInWorld;
 end
